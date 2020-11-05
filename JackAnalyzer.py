@@ -8,11 +8,9 @@ class JackAnalyzer:
     def __init__(self, path: str):
         self.compilation_engine = CompilationEngine(path)
 
-        tokenizer = Tokenizer(None)
-
-    def build_xml(self):
-        self.compilation_engine.compile_to_xml()
+    def compile(self):
+        self.compilation_engine.compile()
 
 
 if __name__ == '__main__':
-    JackAnalyzer(None).build_xml()
+    JackAnalyzer(sys.argv[1]).compile()

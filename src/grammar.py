@@ -2,7 +2,7 @@ import re
 
 from src.constants import symbols, keywords
 
-string_constant_re = re.compile(r'"[^"\n]*"')
+string_constant_re = re.compile(r'"([^"\n]*)"')
 
 int_constant_re = re.compile(r'\d+')
 
@@ -15,3 +15,5 @@ keywords_prepared = '(' + '|'.join(keywords) + ')\W'
 keywords_re = re.compile(fr'{keywords_prepared}')
 
 inline_comment_re = re.compile(r'\/\/.*$')
+
+block_comment_re = re.compile(r'\/\*.*\*\/', re.DOTALL | re.MULTILINE)
