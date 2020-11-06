@@ -16,4 +16,5 @@ keywords_re = re.compile(fr'{keywords_prepared}')
 
 inline_comment_re = re.compile(r'\/\/.*$')
 
-block_comment_re = re.compile(r'\/\*.*\*\/', re.DOTALL | re.MULTILINE)
+# *? means non-greedy *, match as less as possible
+block_comment_re = re.compile(r'\/\*.*?\*\/', re.DOTALL | re.MULTILINE | re.U)
