@@ -103,3 +103,24 @@ class Tokenizer:
                 self.source_file += inline_comment_re.sub('', line)
 
         self.source_file = block_comment_re.sub('', self.source_file)
+
+    def __repr__(self):
+        repr_template = f"Tokenizer(type={self._token_type.value}, value=%s)"
+        value = str()
+
+        if self._token_type == TokenType.symbol:
+            value = self._symbol
+
+        if self._token_type == TokenType.identifier:
+            value = self._identifier
+
+        if self._token_type == TokenType.keyword:
+            value = self._keyword
+
+        if self._token_type == TokenType.int_constant:
+            value = self._int_val
+
+        if self._token_type == TokenType.string_constant:
+            value = self._string_val
+
+        return repr_template % value
