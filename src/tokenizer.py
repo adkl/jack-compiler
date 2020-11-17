@@ -14,6 +14,8 @@ class Tokenizer:
         self._int_val = None
         self._string_val = None
 
+        self._current_token_indices = (0, 0)
+
         self.file_path = file_path
         self.source_file = ""
 
@@ -22,8 +24,9 @@ class Tokenizer:
     def has_more_tokens(self):
         return bool(self.source_file.lstrip())
 
-    def advance(self):
+    def advance(self, eat=True):
         matched = False
+        match_indices = [0, 0]
 
         # Remove any leading spaces
         self.source_file = self.source_file.lstrip()
@@ -36,38 +39,44 @@ class Tokenizer:
             matched = True
             self._keyword = keyword_matched.group(1)
             self._token_type = TokenType.keyword
-            self.__eat_matched(keyword_matched.regs[1])
+            self._current_token_indices = keyword_matched.regs[1]
 
         identifier_matched = identifier_re.match(self.source_file)
         if identifier_matched and not matched:
             matched = True
             self._identifier = identifier_matched.group(0)
             self._token_type = TokenType.identifier
-            self.__eat_matched(identifier_matched.regs[0])
+            self._current_token_indices = identifier_matched.regs[0]
 
         symbol_matched = symbol_re.match(self.source_file)
         if symbol_matched and not matched:
             matched = True
             self._symbol = symbol_matched.group(0)
             self._token_type = TokenType.symbol
-            self.__eat_matched(symbol_matched.regs[0])
+            self._current_token_indices = symbol_matched.regs[0]
 
         string_matched = string_constant_re.match(self.source_file)
         if string_matched and not matched:
             matched = True
             self._string_val = string_matched.group(1)
             self._token_type = TokenType.string_constant
-            self.__eat_matched(string_matched.regs[0])
+            self._current_token_indices = string_matched.regs[0]
 
         int_matched = int_constant_re.match(self.source_file)
         if int_matched and not matched:
             matched = True
             self._int_val = int_matched.group(0)
             self._token_type = TokenType.int_constant
-            self.__eat_matched(int_matched.regs[0])
+            self._current_token_indices = int_matched.regs[0]
 
         if not matched:
             raise SyntaxError(f"Token invalid at {self.source_file}")
+
+        if eat:
+            self.__eat_matched(self._current_token_indices)
+
+    def eat_current(self):
+        self.__eat_matched(self._current_token_indices)
 
     @property
     def token_type(self) -> TokenType:
