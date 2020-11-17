@@ -43,11 +43,8 @@ class CompilationEngine:
 
         tokenizer.advance()
         self.__check_is_left_curly_brace(tokenizer)
-
         self.__compile_class_var_dec()
-
         self.__compile_subroutine_dec()
-
         self.__check_is_right_curly_brace(tokenizer)
 
     def __compile_class_var_dec(self):
@@ -64,11 +61,9 @@ class CompilationEngine:
             if not self.__is_type(tokenizer):
                 raise SyntaxError("Invalid type in class variable declaration.")
 
-            tokenizer.advance()
-            if not tokenizer.token_type == TokenType.identifier:
-                raise SyntaxError("Invalid identifier in class variable declaration.")
-
             self.__compile_var_name_list()
+
+            tokenizer.advance()
             self.__check_is_semicolon(tokenizer)
 
             tokenizer.advance()
@@ -77,8 +72,9 @@ class CompilationEngine:
     def __compile_subroutine_dec(self):
         tokenizer = self.tokenizer
 
-        is_subroutine = tokenizer.token_type == TokenType.keyword \
-                        and tokenizer.keyword in ['constructor', 'function', 'method']
+        is_subroutine = \
+            tokenizer.token_type == TokenType.keyword \
+            and tokenizer.keyword in ['constructor', 'function', 'method']
 
         if not is_subroutine:
             return
@@ -95,6 +91,8 @@ class CompilationEngine:
             tokenizer.advance()
             self.__check_is_left_brace(tokenizer)
             self.__compile_params_list()
+
+            tokenizer.advance()
             self.__check_is_right_brace(tokenizer)
 
             tokenizer.advance()
@@ -105,44 +103,28 @@ class CompilationEngine:
 
             self.__check_is_right_curly_brace(tokenizer)
 
-            is_subroutine = tokenizer.token_type == TokenType.keyword \
-                            and tokenizer.keyword in ['constructor', 'function', 'method']
-
-    def __compile_var_dec(self):
-        tokenizer = self.tokenizer
-
-        is_var = tokenizer.token_type == TokenType.keyword and tokenizer.keyword == 'var'
-
-        if not is_var:
-            return
-
-        while is_var:
-            tokenizer.advance()
-            if not self.__is_type(tokenizer):
-                raise SyntaxError("Type expected")
-
-            tokenizer.advance()
-            if not tokenizer.token_type != TokenType.identifier:
-                raise SyntaxError("Identifier expected")
-
-            self.__compile_var_name_list()
-            self.__check_is_semicolon(tokenizer)
+            is_subroutine = \
+                tokenizer.token_type == TokenType.keyword \
+                and tokenizer.keyword in ['constructor', 'function', 'method']
 
     def __compile_params_list(self):
         tokenizer = self.tokenizer
-        tokenizer.advance()
+        tokenizer.advance(eat=False)
 
         if not self.__is_type(tokenizer):
             return
+        tokenizer.eat_current()
 
         tokenizer.advance()
         if not tokenizer.token_type == TokenType.identifier:
             raise SyntaxError("Identifier expected in method params declaration.")
 
-        tokenizer.advance()
+        tokenizer.advance(eat=False)
         has_next = tokenizer.token_type == TokenType.symbol and tokenizer.symbol == ','
 
         while has_next:
+            tokenizer.eat_current()
+
             tokenizer.advance()
             if not self.__is_type(tokenizer):
                 raise SyntaxError("Type expected in method param declaration.")
@@ -151,21 +133,51 @@ class CompilationEngine:
             if not tokenizer.token_type == TokenType.identifier:
                 raise SyntaxError("Identifier expected in method params declaration.")
 
-            tokenizer.advance()
+            tokenizer.advance(eat=False)
             has_next = tokenizer.token_type == TokenType.symbol and tokenizer.symbol == ','
+
+    def __compile_var_dec(self):
+        """
+        Compiles method variable declarations
+        """
+        tokenizer = self.tokenizer
+        tokenizer.advance()
+
+        is_var = tokenizer.token_type == TokenType.keyword and tokenizer.keyword == 'var'
+        if not is_var:
+            return
+
+        while is_var:
+            tokenizer.advance()
+            if not self.__is_type(tokenizer):
+                raise SyntaxError("Type expected in a method var declaration.")
+
+            self.__compile_var_name_list()
+
+            tokenizer.advance()
+            self.__check_is_semicolon(tokenizer)
+
+            tokenizer.advance()
+            is_var = tokenizer.token_type == TokenType.keyword and tokenizer.keyword == 'var'
 
     def __compile_var_name_list(self):
         tokenizer = self.tokenizer
         tokenizer.advance()
 
+        if not tokenizer.token_type == TokenType.identifier:
+            raise SyntaxError("Invalid identifier in class or method variable declaration.")
+
+        tokenizer.advance(eat=False)
         has_next = tokenizer.token_type == TokenType.symbol and tokenizer.symbol == ','
 
         while has_next:
+            tokenizer.eat_current()
+
             tokenizer.advance()
             if not tokenizer.token_type == TokenType.identifier:
                 raise SyntaxError("Identifier expected")
 
-            tokenizer.advance()
+            tokenizer.advance(eat=False)
             has_next = tokenizer.token_type == TokenType.symbol and tokenizer.symbol == ','
 
     def __compile_statements(self):
@@ -173,23 +185,116 @@ class CompilationEngine:
             'let': self.__compile_let_stm,
             'do': self.__compile_do_stm,
             'if': self.__compile_if_stm,
-            'else': self.__compile_else_stm,
-            'while': self.__compile_while_stm
+            'while': self.__compile_while_stm,
+            'return': self.__compile_return_stm
         }
         tokenizer = self.tokenizer
+        tokenizer.advance(eat=False)
 
-        has_more_statements = True
+        has_more_statements = tokenizer.token_type == TokenType.keyword and tokenizer.keyword in statements.keys()
+
         while has_more_statements:
-            if tokenizer.token_type == TokenType.keyword:
-                compile_statement_method = statements.get(tokenizer.keyword)
+            tokenizer.eat_current()
 
-                if not compile_statement_method:
-                    raise SyntaxError("Invalid statement defined.")
+            compile_statement_method = statements.get(tokenizer.keyword)
+            compile_statement_method()
 
-                compile_statement_method()
-                tokenizer.advance()
-
+            tokenizer.advance(eat=False)
             has_more_statements = tokenizer.token_type == TokenType.keyword and tokenizer.keyword in statements.keys()
+
+    def __compile_let_stm(self):
+        tokenizer = self.tokenizer
+        tokenizer.advance()
+
+        if tokenizer.token_type != TokenType.identifier:
+            raise SyntaxError("Identifier expected after 'let'.")
+
+        tokenizer.advance()
+        self.__compile_array_index()
+
+        tokenizer.advance()
+        if tokenizer.token_type != TokenType.symbol or tokenizer.symbol != '=':
+            raise SyntaxError("= expected in the statement.")
+
+        self.__compile_expression()
+
+        self.__check_is_semicolon(tokenizer)
+
+    def __compile_array_index(self):
+        tokenizer = self.tokenizer
+        if not (tokenizer.token_type == TokenType.symbol and tokenizer.symbol == '['):
+            return
+
+        self.__compile_expression()
+
+        self.__check_is_right_square_brace(tokenizer)
+
+    def __compile_do_stm(self):
+        tokenizer = self.tokenizer
+        tokenizer.advance()
+
+        # subroutine call
+
+        self.__check_is_semicolon(tokenizer)
+
+    def __compile_if_stm(self):
+        tokenizer = self.tokenizer
+
+        tokenizer.advance()
+        self.__check_is_left_brace(tokenizer)
+
+        self.__compile_expression()
+
+        tokenizer.advance()
+        self.__check_is_right_brace(tokenizer)
+
+        tokenizer.advance()
+        self.__check_is_left_curly_brace(tokenizer)
+
+        self.__compile_statements()
+
+        tokenizer.advance()
+        self.__check_is_right_curly_brace(tokenizer)
+
+        tokenizer.advance(eat=False)
+        if tokenizer.token_type == TokenType.keyword and tokenizer.keyword == 'else':
+            tokenizer.eat_current()
+
+            tokenizer.advance()
+            self.__check_is_left_curly_brace(tokenizer)
+            self.__compile_statements()
+            tokenizer.advance()
+            self.__check_is_right_curly_brace(tokenizer)
+
+    def __compile_while_stm(self):
+        tokenizer = self.tokenizer
+
+        tokenizer.advance()
+        self.__check_is_left_brace(tokenizer)
+
+        self.__compile_expression()
+
+        tokenizer.advance()
+        self.__check_is_right_brace(tokenizer)
+
+        tokenizer.advance()
+        self.__check_is_left_curly_brace(tokenizer)
+
+        self.__compile_statements()
+
+        tokenizer.advance()
+        self.__check_is_right_curly_brace(tokenizer)
+
+    def __compile_return_stm(self):
+        tokenizer = self.tokenizer
+
+        self.__compile_expression(optional=True)
+
+        tokenizer.advance()
+        self.__check_is_semicolon(tokenizer)
+
+    def __compile_expression(self, optional=False):
+        pass
 
     @staticmethod
     def __is_type(tokenizer):
@@ -220,3 +325,8 @@ class CompilationEngine:
     def __check_is_right_brace(tokenizer):
         if tokenizer.token_type != TokenType.symbol or tokenizer.symbol != ')':
             raise SyntaxError("Semicolon expected.")
+
+    @staticmethod
+    def __check_is_right_square_brace(tokenizer):
+        if tokenizer.token_type != TokenType.symbol or tokenizer.symbol != ']':
+            raise SyntaxError("] expected.")

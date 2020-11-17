@@ -1,7 +1,6 @@
 import sys
 
 from src.compilation_engine import CompilationEngine
-from src.tokenizer import Tokenizer
 
 
 class JackAnalyzer:
