@@ -26,7 +26,6 @@ class Tokenizer:
 
     def advance(self, eat=True):
         matched = False
-        match_indices = [0, 0]
 
         # Remove any leading spaces
         self.source_file = self.source_file.lstrip()
