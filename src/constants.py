@@ -39,3 +39,5 @@ class Main {
     }
 }
 """
+
+token = 'ado'
