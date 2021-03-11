@@ -41,3 +41,5 @@ class Main {
 """
 
 token = 'ado'
+
+token2 = 'ado2'
